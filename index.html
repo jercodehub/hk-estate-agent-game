@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>地產佬日常：香港樓市生存記</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: "PingFang HK", "Microsoft JhengHei", sans-serif; background: #1a1a2e; color: #eee; line-height: 1.6; }
+.container { max-width: 800px; margin: 20px auto; padding: 20px; background: #16213e; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+h1 { text-align: center; color: #e94560; margin-bottom: 10px; }
+.stats { display: flex; justify-content: space-around; background: #0f3460; padding: 15px; border-radius: 8px; margin: 15px 0; flex-wrap: wrap; }
+.stat { text-align: center; min-width: 100px; }
+.stat span { font-weight: bold; color: #00d9ff; }
+#story { background: #0f3460; padding: 20px; border-radius: 8px; min-height: 150px; margin: 15px 0; }
+.choices { display: flex; flex-direction: column; gap: 10px; }
+button { background: #e94560; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.2s; }
+button:hover { background: #c73e54; }
+.hidden { display: none; }
+.day { font-size: 1.2em; color: #00d9ff; text-align: center; margin: 10px 0; }
+.district { color: #ffd700; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>地產佬日常：香港樓市生存記</h1>
+<div class="day" id="day">第 1 日</div>
+<div class="stats">
+<div class="stat">金錢<br><span id="money">0</span> 元</div>
+<div class="stat">聲譽<br><span id="rep">50</span></div>
+<div class="stat">風險<br><span id="risk">0</span></div>
+</div>
+<div id="story"></div>
+<div class="choices" id="choices"></div>
+<button id="nextDay" class="hidden" onclick="nextDay()">下一日</button>
+</div>
+
+<script>
+let day = 1;
+let money = 0;
+let rep = 50;
+let risk = 0;
+let maxDay = 7;
+
+const districts = [
+  { name: "沙田", type: "家庭客" },
+  { name: "觀塘", type: "旧樓散戶" },
+  { name: "將軍澳", type: "新盤年輕家庭" },
+  { name: "大角咀", type: "劍房租客" },
+  { name: "北角", type: "大手自住" },
+  { name: "太古", type: "高淨值" },
+  { name: "屯門", type: "家庭價低" },
+  { name: "元朗", type: "首次置業" },
+  { name: "九龍塘", type: "豪宅大手" },
+  { name: "銅鑼灣", type: "商住混合" }
+];
+
+const events = [
+  {
+    text: "今日有位散戶客想在觀塘租一間舊樓，業主私下同你話單位有輕微漏水，但叫你「唔好講住」。客人已經睇完樓，想知道有無問題。",
+    choices: [
+      { text: "忠實話佢有漏水", money: -500, rep: +10, risk: 0, result: "客人聽完後状豫，但仲係租咗，仲講謝你誠實。聲譽升。" },
+      { text: "唔講，話單位幾好", money: +2000, rep: -15, risk: +5, result: "客人快速簽約。但三日後發現漏水，來投訴你。聲譽大跌，風險升。" },
+      { text: "建議客人再睇多一間", money: 0, rep: +5, risk: 0, result: "客人覺得你對佢好，聲譽小升。" }
+    ]
+  },
+  {
+    text: "一位大手客想在將軍澳買兩伙新盤作投資。發展商叫你優先推佢個盤，仲話如果成交會佢額外佣金。",
+    choices: [
+      { text: "收回佣，優先推呢個盤", money: +8000, rep: -10, risk: +3, result: "大手客買咗兩伙，你收到額外佣金。但其他經紀後尾講你「食水」。" },
+      { text: "拒絕額外佣金，公平推薦", money: +5000, rep: +15, risk: 0, result: "客人份覺得你專業，聲譽大升。" },
+      { text: "話佢知有更好盤，推第二間", money: +3000, rep: +5, risk: 0, result: "客人聽你分析，最後買咗其他盤。" }
+    ]
+  },
+  {
+    text: "沙田一間居屋放盤，散戶家庭想買來自住。但你知道單位有僧建（封左露台），業主叫你唔好講。",
+    choices: [
+      { text: "隱瞞僧建", money: +3500, rep: -20, risk: +8, result: "成交了，但客人入住後被屋宇署查，來責怪你。風險大升。" },
+      { text: "提醒客人僧建問題", money: +1500, rep: +12, risk: 0, result: "客人欣賞你誠實，雖然最後唔買，但介紹左朋友來。" },
+      { text: "叫業主先拆僧建先買", money: +2000, rep: +8, risk: -2, result: "業主同意拆，客人滿意買下。" }
+    ]
+  },
+  {
+    text: "北角有位大手客想買二手洋樓，但單位管理費好高，仲有天台漏水記錄。客人問你值唔值得買。",
+    choices: [
+      { text: "誠實講管理費同漏水記錄", money: +4000, rep: +10, risk: 0, result: "客人欣賞你專業，最後仲係買咗。" },
+      { text: "講管理費值得，漏水已修好", money: +6000, rep: -8, risk: +4, result: "客人買下，但後來發現問題未解決。" },
+      { text: "推薦佢再睇太古其他盤", money: +2500, rep: +5, risk: 0, result: "客人聽你建議，轉去睇其他盤。" }
+    ]
+  },
+  {
+    text: "屯門散戶想租一間三房，但單位隔音差，隔壁晚晚高歌。業主叫你唔好講。",
+    choices: [
+      { text: "唔講隔音問題", money: +1800, rep: -12, risk: +6, result: "客人租咗，一星期後投訴你隐瞞問題。" },
+      { text: "提醒隔音差", money: +800, rep: +10, risk: 0, result: "客人欣賞你，雖然唔租，但話你好人。" },
+      { text: "建議佢睇元朗其他盤", money: +1000, rep: +3, risk: 0, result: "客人同意再睇。" }
+    ]
+  }
+];
+
+function updateStats() {
+  document.getElementById("day").textContent = "第 " + day + " 日";
+  document.getElementById("money").textContent = money;
+  document.getElementById("rep").textContent = Math.max(0, Math.min(100, rep));
+  document.getElementById("risk").textContent = risk;
+}
+
+function showEvent() {
+  if (day > maxDay) {
+    endGame();
+    return;
+  }
+  const event = events[(day - 1) % events.length];
+  const district = districts[(day - 1) % districts.length];
+  document.getElementById("story").innerHTML = `<p><span class="district">${district.name}</span> — ${district.type}</p><p>${event.text}</p>`;
+  const choicesDiv = document.getElementById("choices");
+  choicesDiv.innerHTML = "";
+  event.choices.forEach((choice, i) => {
+    const btn = document.createElement("button");
+    btn.textContent = choice.text;
+    btn.onclick = () => makeChoice(choice);
+    choicesDiv.appendChild(btn);
+  });
+  document.getElementById("nextDay").classList.add("hidden");
+}
+
+function makeChoice(choice) {
+  money += choice.money;
+  rep += choice.rep;
+  risk += choice.risk;
+  if (rep < 0) rep = 0;
+  if (rep > 100) rep = 100;
+  updateStats();
+  document.getElementById("story").innerHTML += `<p style="margin-top:15px;color:#00d9ff;"><strong>結果：</strong> ${choice.result}</p>`;
+  document.getElementById("choices").innerHTML = "";
+  document.getElementById("nextDay").classList.remove("hidden");
+}
+
+function nextDay() {
+  day++;
+  showEvent();
+}
+
+function endGame() {
+  let ending = "";
+  if (rep >= 70 && risk < 10) ending = "你成為一位受客戶尊敬的良心經紀，雖然賺得唔算最多，但口碑很好，生意穩定。";
+  else if (money > 20000 && risk > 15) ending = "你賺得袋袋安全，但聲譽差，客戶投訴多，公司開始警告你。";
+  else if (risk > 20) ending = "風險太高，最後被客戶聯合投訴，你被公司辭退。";
+  else ending = "你平衡地做經紀，賺到一定佣金，聲譽中等，繼續在香港樓市生存。";
+
+  document.getElementById("story").innerHTML = `<h2>游戲結束</h2><p>總共做咗 ${maxDay} 日地產佬。</p><p>最終金錢：${money} 元</p><p>最終聲譽：${rep}</p><p>最終風險：${risk}</p><p style="margin-top:15px;">${ending}</p>`;
+  document.getElementById("choices").innerHTML = "";
+  document.getElementById("nextDay").classList.add("hidden");
+  const restart = document.createElement("button");
+  restart.textContent = "再玩一次";
+  restart.onclick = () => location.reload();
+  document.getElementById("choices").appendChild(restart);
+}
+
+updateStats();
+showEvent();
+</script>
+</body>
+</html>
